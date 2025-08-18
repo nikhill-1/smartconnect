@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title style="background-color: transparent;">SMART-CONNECT</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" href="chatbotadmin.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,700,300">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/material-design-iconic-font/2.1.2/css/material-design-iconic-font.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400&family=Finger+Paint&display=swap">
+  </head>
+  <body>
+<body>
+  <div class="card">
+    <div id="common" style="border: 2px solid grey;">
+    <div id="header">
+      <h1 >SMART-CONNECT!</h1>
+    </div>
+    <hr style="background-color: transparent;">
+    <div id="message-section">
+      <div class="message" id="bot"><span id="bot-response">Hello.. I'm listening! Go on..</span></div>
+    </div>
+    <div id="button-container">
+      <button class="chat-button" data-message="college timings" id="">timings of college</button>
+      <button class="chat-button" data-message="Who is the principal?">Who is the principal?</button>
+      <button class="chat-button" data-message="what courses are offered by the college">courses offered?</button>
+      <button class="chat-button" data-message="Tell me about the college">Tell me about the college</button>
+      <button class="chat-button" data-message="contact info">contact us!</button>
+      <button class="chat-button" data-message="admission process"> required documents for addmissions</button>
+      <button class="chat-button" data-message="address of the college"> address of the college </button>
+      <button class="chat-button" data-message="fee structure of the college"> fee structure of the college </button>
+
+    </div>
+    <div id="input-section">
+      <input id="input" type="text" placeholder="Type a message" autocomplete="off" autofocus="autofocus" accept=".xlsx" onfocus="this.value=''"/>
+      <button class="send" id="btn" >
+        <div class="circle"><i class="zmdi zmdi-mail-send"></i></div>
+      </button>
+    </div>
+  </div>
+</div>
+  <script src="chatbot.js"> </script>
+</body>
+</html>

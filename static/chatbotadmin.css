@@ -1,0 +1,159 @@
+* {
+  font-size: 1.3vw;
+  font-family: "Epilogue", sans-serif;
+}
+html {
+  --scrollbarBG: #fff;
+  --thumbBG: #2E56DD;
+}
+#button-container{
+  margin-bottom: 4px;
+  margin-left: 40px;
+  padding: 1px;
+}
+.chat-button{
+  margin: 3px;
+  background-color:#58c1F8;
+  border-radius: 10px;
+  padding: 10px;
+  color: white;
+  transition: ease-out;
+  border: none;
+}
+.chat-button:hover {
+  transition: ease-in;
+  transition-duration: 200ms;
+  background-color:#2E56DD
+}
+/* .chat-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+} */
+
+
+body {
+  background: #ffffff;
+}
+body .card {
+  height: 20vw;
+  width: 92vw;
+  margin-left: 2vw;
+  margin-top: 0vw;
+  border-radius: 20px 20px 0px 0px;
+  background:linear-gradient(to bottom right, #2E56DD, #58c1F8);
+  height: 70px;
+}
+hr{
+  background-color: transparent;
+}
+body .card #header h1 {
+  color: white;
+  font-size: 2vw;
+  font-family:'Times New Roman', Times, serif;
+  text-align: center;    
+}
+body .card #message-section::-webkit-scrollbar {
+  width: 10px;
+}
+body .card #message-section {
+  height: 35vw;
+  padding: 0 2.5vw;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--thumbBG) var(--scrollbarBG);
+}
+body .card #message-section::-webkit-scrollbar-track {
+  background: var(--scrollbarBG);
+}
+body .card #message-section::-webkit-scrollbar-thumb {
+  background-color: var(--thumbBG);
+  border-radius: 6px;
+  border: 3px solid var(--scrollbarBG);
+}
+body .card #message-section #bot,
+body .card #message-section #user {
+  position: relative;
+  bottom: 0;
+  min-height: 1.5vw;
+  color: black;
+  border: 2px solid #F0F2F6;
+  background-color: #F0F2F6;
+  border-radius: 0px 1.5vw 1.5vw 1.8vw;
+  padding: 1vw;
+  margin: 2vw 0;
+}
+body .card #message-section #user {
+  border-radius: 1.5vw 0vw 1.5vw 1.8vw;
+  background:linear-gradient(to bottom right, #2E56DD, #58c1F8);
+  float: right;
+}
+body .card #message-section #user #user-response {
+  color: white;
+}
+body .card #message-section .message {
+  color: #2E56DD;
+  clear: both;
+  line-height: 1.2vw;
+  font-size: 1.2vw;
+  padding: 8px;
+  position: relative;
+  margin: 8px 0;
+  max-width: 90%;
+  word-wrap: break-word;
+  z-index: 2;
+}
+body .card #input-section {
+  z-index: 1;
+  padding: 0 2.5vw;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  overflow: hidden;
+  height: 6vw;
+  width: 100%;
+}
+body .card #input-section input {
+  color: #444152;
+  background-color: #F0F2F6;
+  min-width: 0.5vw;
+  outline: none;
+  height: 4vw;
+  width: 82vw;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 20px;
+  border: 2px solid #F0F2F6;
+  margin-bottom: 10px;
+
+}
+body .card .send {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+  margin-left: 1.4vw;
+  margin-right: 0vw;
+  padding: 0;
+  position: relative;
+  outline: none;
+  color: #2E56DD;
+  margin-bottom: 20px;
+}
+body .card .send .circle {
+  position: relative;
+  width: 4.8vw;
+  height: 4.8vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+body .card .send .circle i {
+  font-size: 3vw;
+  margin-left: -1vw;
+  margin-top: 1vw;
+}
+body #common{
+  border-radius: 15px;
+}
