@@ -1,0 +1,598 @@
+/* Migrated stylesheet preserving the exact TRR Group of Institutions website design */
+
+.par {
+  font-size: 13px;
+  background-color: #267EB2;
+  color: #F8FBF8;
+  text-align: center;
+  padding: 8px 15px;
+  line-height: 1.4;
+}
+
+#para {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: rgb(247, 247, 247);
+  color: #333333;
+}
+
+.heade {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1300px;
+  margin: 10px auto;
+  padding: 0 20px;
+}
+
+.heade-brand {
+  display: flex;
+  align-items: center;
+}
+
+#hh1 {
+  margin-left: 20px;
+  color: #E42C2C;
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+#hh1 small {
+  font-size: 13px;
+  color: #1A4A95;
+  font-weight: 600;
+  display: block;
+}
+
+.mm {
+  margin-left: auto;
+}
+
+#lki {
+  height: 52px;
+  min-width: 150px;
+  color: #222;
+  background-color: white;
+  border: 2px solid #5c9dd3;
+  border-radius: 40px;
+  box-shadow: 0px 0px 15px 5px #5c9dd3;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 200ms ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+#lki:hover {
+  background-color: #5c9dd3;
+  color: #ffffff;
+  border: 2px solid #2d2d2d;
+  box-shadow: 0px 0px 20px 8px #267EB2;
+}
+
+nav {
+  background-color: rgb(255, 255, 255);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#jss {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+#jss li {
+  margin: 5px 8px;
+  padding: 0;
+  border-radius: 4px;
+  transition: all 300ms ease-in-out;
+}
+
+#jss li a {
+  display: block;
+  text-decoration: none;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #333333;
+  border-radius: 4px;
+  transition: all 300ms ease-in-out;
+}
+
+#jss li a:hover {
+  background-color: #5c9dd3;
+  color: white;
+}
+
+#jss li.active-nav {
+  background-color: #5c9dd3;
+}
+
+#jss li.active-nav a {
+  color: white;
+}
+
+#jss li.admin-nav-item {
+  background-color: #1A4A95;
+}
+
+#jss li.admin-nav-item a {
+  color: white;
+}
+
+#imm {
+  display: block;
+  width: 100%;
+  max-width: 1341px;
+  margin: 10px auto;
+  border-radius: 4px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  object-fit: cover;
+}
+
+#h22 {
+  color: #267EB2;
+  text-align: center;
+  font-size: 32px;
+  margin-top: 35px;
+  margin-bottom: 15px;
+}
+
+#h23 {
+  text-align: center;
+  font-size: 20px;
+  line-height: 1.6;
+  max-width: 1100px;
+  margin: 0 auto 30px auto;
+  padding: 0 20px;
+  color: #444;
+}
+
+#h24 {
+  color: #267EB2;
+  text-align: center;
+  font-size: 32px;
+  margin-top: 40px;
+  margin-bottom: 25px;
+}
+
+.hoo {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 30px;
+  background-color: transparent;
+  margin: 20px auto 40px auto;
+}
+
+.hoo button, .hoo .explore-card {
+  width: 374px;
+  border: 0;
+  background-color: transparent;
+  text-align: center;
+  cursor: pointer;
+}
+
+.hoo a {
+  text-decoration: none;
+  font-size: 24px;
+  font-family: 'Times New Roman', Times, serif;
+  color: #267EB2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hoo img {
+  border-radius: 230px;
+  background-color: transparent;
+  transition: all 300ms ease-in-out;
+  width: 250px;
+  height: 250px;
+  object-fit: cover;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.hoo img:hover {
+  border-radius: 12px;
+  transform: scale(1.03);
+}
+
+.ook {
+  margin-top: 40px;
+}
+
+#ai {
+  color: white;
+  min-height: 100px;
+  background-color: #267EB2;
+  padding: 15px 30px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  font-size: 24px;
+  margin: 0;
+}
+
+.mim {
+  display: inline-block;
+}
+
+/* Footer */
+footer {
+  margin-top: 80px;
+  background-color: #2d2d2d;
+  color: white;
+  padding: 40px 20px 25px 20px;
+  text-align: center;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.mmk {
+  text-align: left;
+  color: white;
+}
+
+.mmk h3 {
+  color: #58c1F8;
+  margin-bottom: 10px;
+}
+
+.mmk h4 {
+  margin: 5px 0;
+  font-weight: 400;
+}
+
+.mmk address {
+  font-style: normal;
+  margin: 8px 0;
+  color: #ddd;
+}
+
+.mmk h5 {
+  margin-top: 10px;
+  color: #aaa;
+  font-size: 14px;
+}
+
+#exp {
+  border: 0;
+  border-radius: 30px;
+  height: 50px;
+  width: 170px;
+  background-color: white;
+  color: #267EB2;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 200ms ease-in-out;
+}
+
+#exp:hover {
+  background-color: #267EB2;
+  color: white;
+  box-shadow: 0 0 15px #58c1F8;
+}
+
+/* About Us Page specific */
+.ddd {
+  text-align: center;
+  margin: 30px auto;
+}
+
+.ddd img {
+  height: 100px;
+  margin: 15px 25px;
+  object-fit: contain;
+  transition: transform 200ms;
+}
+
+.ddd img:hover {
+  transform: scale(1.08);
+}
+
+.kkk h1 {
+  color: #267EB2;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.TKR {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 1100px;
+  margin: 30px auto;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.TKR img {
+  width: 250px;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.TKR p {
+  font-size: 18px;
+  line-height: 1.7;
+  color: #333;
+  flex: 1;
+  min-width: 300px;
+}
+
+.TNR {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 1100px;
+  margin: 30px auto;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.TNR img {
+  width: 250px;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.TNR p {
+  font-size: 18px;
+  line-height: 1.7;
+  color: #333;
+  flex: 1;
+  min-width: 300px;
+}
+
+/* Academics & Departments cards */
+.hooh1 {
+  display: flex;
+  gap: 30px;
+  text-align: center;
+  margin: 40px auto;
+  justify-content: center;
+  flex-wrap: wrap;
+  color: #267EB2;
+}
+
+.hooh1 img {
+  width: 300px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.hooh1 button {
+  height: 45px;
+  width: 140px;
+  color: white;
+  background-color: #267EB2;
+  border: 2px solid white;
+  border-radius: 30px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 200ms ease-in-out;
+}
+
+.hooh1 button:hover {
+  background-color: rgb(255, 255, 255);
+  color: #267EB2;
+  border: 2px solid #267EB2;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Admissions Page Cards */
+.p55 {
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  margin: 30px auto;
+  max-width: 1200px;
+}
+
+.h12, .h13, .h14 {
+  background-color: #267EB2;
+  color: white;
+  width: 340px;
+  min-height: 620px;
+  border-radius: 10px;
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.p55 img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+.p55 h1 {
+  font-size: 24px;
+  margin: 10px 0;
+  color: #ffffff;
+}
+
+.p55 h4 {
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.p55 button {
+  background-color: white;
+  color: #267EB2;
+  border: 0;
+  height: 40px;
+  width: 140px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: all 200ms ease-in-out;
+}
+
+.p55 button:hover {
+  background-color: #1A4A95;
+  color: white;
+  box-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+/* Contact Us */
+.lk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  margin: 40px auto;
+}
+
+.lk h3 {
+  color: #1A4A95;
+  font-size: 20px;
+  text-align: center;
+}
+
+.lk p {
+  background-color: #267EB2;
+  color: white;
+  width: 450px;
+  max-width: 90vw;
+  padding: 15px 20px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 8px auto 0 auto;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+}
+
+/* Polytechnic Vision/Mission */
+#polytech {
+  font-size: 18px;
+  padding: 20px;
+  line-height: 1.8;
+  max-width: 900px;
+  margin: 0 auto;
+  color: #333;
+}
+
+/* Admin Login Card */
+.login-card {
+  width: 320px;
+  margin: 80px auto;
+  padding: 30px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background-color: white;
+  box-shadow: 0 4px 20px rgba(88, 193, 248, 0.4);
+}
+
+.card-header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.card-header .log {
+  font-size: 28px;
+  color: #1A4A95;
+  font-weight: 700;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-group label {
+  font-size: 15px;
+  color: #333;
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"] {
+  width: 100%;
+  padding: 12px 15px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="password"]:focus {
+  border-color: #2E56DD;
+  box-shadow: 0 0 5px rgba(46, 86, 221, 0.3);
+}
+
+.form-group input[type="submit"],
+.btn-primary {
+  width: 100%;
+  background: linear-gradient(to bottom right, #2E56DD, #58c1F8);
+  color: white;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+
+.form-group input[type="submit"]:hover,
+.btn-primary:hover {
+  background: linear-gradient(to bottom right, #58c1F8, #2E56DD);
+  color: white;
+  box-shadow: 0 4px 12px rgba(46, 86, 221, 0.4);
+}

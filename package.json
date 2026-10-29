@@ -1,0 +1,31 @@
+{
+  "name": "smartconnect",
+  "version": "1.0.0",
+  "description": "SmartConnect: AI-Powered College Information System for TRR Group of Institutions",
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue,green\" \"npm run dev:server\" \"npm run dev:client\"",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "build": "npm run build:server && npm run build:client",
+    "start": "cd server && npm start",
+    "test": "cd server && npm test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "keywords": [
+    "trr",
+    "smartconnect",
+    "rag",
+    "ai-chatbot",
+    "pgvector",
+    "react",
+    "typescript",
+    "nodejs"
+  ],
+  "author": "TRR Group of Institutions",
+  "license": "ISC"
+}
