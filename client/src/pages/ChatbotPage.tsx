@@ -8,6 +8,8 @@ interface ChatMessage {
   sender: 'bot' | 'user';
   text: string;
   sources?: SourceCitation[];
+  links?: { label: string; url: string }[];
+  requiresLogin?: boolean;
   confidence?: number;
   status?: string;
 }
@@ -72,6 +74,8 @@ export const ChatbotPage: React.FC = () => {
         sender: 'bot',
         text: res.answer,
         sources: res.sources,
+        links: res.links,
+        requiresLogin: res.requiresLogin,
         confidence: res.confidence,
         status: res.status,
       };
@@ -132,6 +136,49 @@ export const ChatbotPage: React.FC = () => {
                       <span id="bot-response" className="bot-text">
                         {msg.text}
                       </span>
+
+                      {msg.requiresLogin && (
+                        <div style={{ marginTop: '12px' }}>
+                          <Link
+                            to="/student/login"
+                            style={{
+                              display: 'inline-block',
+                              backgroundColor: '#2E56DD',
+                              color: 'white',
+                              padding: '8px 18px',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              textDecoration: 'none',
+                              fontWeight: 700,
+                            }}
+                          >
+                            🔑 Sign In to Student Portal &rarr;
+                          </Link>
+                        </div>
+                      )}
+
+                      {msg.links && msg.links.length > 0 && (
+                        <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {msg.links.map((link, idx) => (
+                            <Link
+                              key={idx}
+                              to={link.url}
+                              style={{
+                                display: 'inline-block',
+                                backgroundColor: '#e0f2fe',
+                                color: '#0369a1',
+                                padding: '5px 12px',
+                                borderRadius: '15px',
+                                fontSize: '12px',
+                                textDecoration: 'none',
+                                fontWeight: 600,
+                              }}
+                            >
+                              📄 {link.label} &rarr;
+                            </Link>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Traceable Source Citations */}
                       {msg.sources && msg.sources.length > 0 && (

@@ -285,3 +285,52 @@
   height: 22px;
   fill: currentColor;
 }
+
+@media (max-width: 600px) {
+  .chatbot-wrapper {
+    padding: 10px 5px;
+  }
+
+  #header h1 {
+    font-size: 20px;
+  }
+
+  .sub-header {
+    font-size: 11px;
+  }
+
+  #message-section {
+    height: 380px;
+    padding: 12px;
+  }
+
+  .bot-message, .user-message {
+    font-size: 14px;
+    padding: 10px 14px;
+  }
+
+  .suggestion-chip {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  #input-section {
+    padding: 12px 14px;
+  }
+
+  #input-section input {
+    height: 42px;
+    font-size: 14px;
+    padding: 0 14px;
+  }
+
+  .circle {
+    width: 40px;
+    height: 40px;
+  }
+
+  .circle svg {
+    width: 18px;
+    height: 18px;
+  }
+}

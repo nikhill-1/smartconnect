@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { processChatQuery } from '../services/ragService';
+import { readOptionalStudentSession } from '../services/authService';
 
 export const chatRouter = Router();
 
-// Official suggested questions matching existing UI buttons
 const SUGGESTED_QUESTIONS = [
   { id: 'timings', label: 'timings of college', query: 'what are the college timings' },
   { id: 'principal', label: 'Who is the principal?', query: 'Who is the principal of your college?' },
@@ -13,22 +13,30 @@ const SUGGESTED_QUESTIONS = [
   { id: 'documents', label: 'required documents for addmissions', query: 'what documents are required for admission' },
   { id: 'address', label: 'address of the college', query: 'what is the address and location of the college' },
   { id: 'fees', label: 'fee structure of the college', query: 'fee structure of the college' },
+  { id: 'circulars', label: 'latest circulars', query: 'show the latest circulars' },
 ];
 
-/**
- * GET /api/suggested-questions
- */
-chatRouter.get('/suggested-questions', (_req: Request, res: Response) => {
+const STUDENT_QUESTIONS = [
+  { id: 'my-attendance', label: 'my attendance', query: 'show my attendance' },
+  { id: 'my-marks', label: 'my marks', query: 'show my marks' },
+];
+
+function sanitizeHistory(history: unknown): { role: 'user' | 'assistant'; text: string }[] {
+  if (!Array.isArray(history)) return [];
+  return history
+    .filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string')
+    .slice(-6)
+    .map((m: any) => ({ role: m.role, text: String(m.text).slice(0, 600) }));
+}
+
+chatRouter.get('/suggested-questions', (req: Request, res: Response) => {
+  const { session } = readOptionalStudentSession(req.headers.authorization);
   res.json({
     success: true,
-    questions: SUGGESTED_QUESTIONS,
+    questions: session ? [...STUDENT_QUESTIONS, ...SUGGESTED_QUESTIONS] : SUGGESTED_QUESTIONS,
   });
 });
 
-/**
- * POST /api/chat
- * Body: { question: string, history?: Array<{ role: 'user' | 'assistant', text: string }> }
- */
 chatRouter.post('/chat', async (req: Request, res: Response): Promise<void> => {
   try {
     const { question, history } = req.body;
@@ -41,9 +49,11 @@ chatRouter.post('/chat', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const response = await processChatQuery(question, history);
+    const { session, expired } = readOptionalStudentSession(req.headers.authorization);
+    const response = await processChatQuery(question, sanitizeHistory(history), session);
     res.json({
       success: true,
+      sessionExpired: expired,
       ...response,
     });
   } catch (err: any) {

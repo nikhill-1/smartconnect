@@ -17,6 +17,7 @@ export interface KnowledgeDocument {
   title: string;
   sourceType: string;
   sourceReference?: string;
+  rawContent?: string;
   accessClassification: 'public' | 'restricted';
   approvalStatus: 'approved' | 'pending';
   version: string;
@@ -31,11 +32,34 @@ export interface SearchResult {
   score: number;
 }
 
-// Resilient in-memory store for fallback or when PostgreSQL is in read-only / standalone mode
+export interface StudentEnquiry {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  courseInterest: string;
+  message?: string;
+  status: 'new' | 'contacted' | 'admitted';
+  createdAt: Date;
+}
+
+export interface UnansweredQueryLog {
+  id: string;
+  query: string;
+  createdAt: Date;
+}
+
+export interface CourseSpreadsheet {
+  pin: string;
+  courseName: string;
+  spreadsheetUrl: string;
+}
+
 const memoryDocuments = new Map<string, KnowledgeDocument>();
 const memoryChunks = new Map<string, DocumentChunk>();
+const memoryEnquiries = new Map<string, StudentEnquiry>();
+const memoryUnansweredQueries: UnansweredQueryLog[] = [];
 
-// Cosine similarity between two float vectors
 export function cosineSimilarity(vecA: number[], vecB: number[]): number {
   if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
   let dotProduct = 0;
@@ -50,7 +74,6 @@ export function cosineSimilarity(vecA: number[], vecB: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-// Save or update document metadata
 export async function saveDocument(doc: KnowledgeDocument): Promise<void> {
   memoryDocuments.set(doc.id, doc);
 
@@ -78,18 +101,15 @@ export async function saveDocument(doc: KnowledgeDocument): Promise<void> {
   }
 }
 
-// Save chunks and embeddings
 export async function saveChunks(chunks: DocumentChunk[]): Promise<void> {
   for (const chunk of chunks) {
     memoryChunks.set(chunk.id, chunk);
   }
-
-  // Update chunk count on document
   if (chunks.length > 0) {
     const docId = chunks[0].documentId;
     const doc = memoryDocuments.get(docId);
     if (doc) {
-      doc.chunkCount = (doc.chunkCount || 0) + chunks.length;
+      doc.chunkCount = Array.from(memoryChunks.values()).filter((c) => c.documentId === docId).length;
       memoryDocuments.set(docId, doc);
     }
   }
@@ -107,36 +127,46 @@ export async function saveChunks(chunks: DocumentChunk[]): Promise<void> {
         if (dbStatus.pgvector && chunk.embedding && chunk.embedding.length > 0) {
           const vectorStr = `[${chunk.embedding.join(',')}]`;
           await pool.query(
-            `INSERT INTO document_chunks (id, document_id, chunk_index, content, embedding, page_number, metadata)
-             VALUES ($1, $2, $3, $4, $5::vector, $6, $7)
+            `INSERT INTO document_chunks (id, document_id, chunk_index, content, page_number, metadata, embedding)
+             VALUES ($1, $2, $3, $4, $5, $6, $7::vector)
              ON CONFLICT (id) DO UPDATE SET
                content = EXCLUDED.content,
-               embedding = EXCLUDED.embedding,
-               metadata = EXCLUDED.metadata;`,
-            [chunk.id, chunk.documentId, chunk.chunkIndex, chunk.content, vectorStr, chunk.pageNumber || 1, metadataJson]
+               page_number = EXCLUDED.page_number,
+               metadata = EXCLUDED.metadata,
+               embedding = EXCLUDED.embedding;`,
+            [chunk.id, chunk.documentId, chunk.chunkIndex, chunk.content, chunk.pageNumber || null, metadataJson, vectorStr]
           );
         } else {
           await pool.query(
-            `INSERT INTO document_chunks (id, document_id, chunk_index, content, page_number, metadata)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO document_chunks (id, document_id, chunk_index, content, page_number, metadata, embedding_json)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
              ON CONFLICT (id) DO UPDATE SET
                content = EXCLUDED.content,
-               metadata = EXCLUDED.metadata;`,
-            [chunk.id, chunk.documentId, chunk.chunkIndex, chunk.content, chunk.pageNumber || 1, metadataJson]
+               page_number = EXCLUDED.page_number,
+               metadata = EXCLUDED.metadata,
+               embedding_json = EXCLUDED.embedding_json;`,
+            [
+              chunk.id,
+              chunk.documentId,
+              chunk.chunkIndex,
+              chunk.content,
+              chunk.pageNumber || null,
+              metadataJson,
+              chunk.embedding?.length ? JSON.stringify(chunk.embedding) : null,
+            ]
           );
         }
       } catch (err: any) {
-        console.warn('[VectorStore] Error writing chunk to PostgreSQL:', err.message);
+        console.warn(`[VectorStore] Error writing chunk ${chunk.id} to PostgreSQL:`, err.message);
       }
     }
   }
 }
 
-// Delete document and all associated chunks
-export async function deleteDocument(documentId: string): Promise<boolean> {
-  memoryDocuments.delete(documentId);
+export async function deleteDocument(docId: string): Promise<void> {
+  memoryDocuments.delete(docId);
   for (const [id, chunk] of memoryChunks.entries()) {
-    if (chunk.documentId === documentId) {
+    if (chunk.documentId === docId) {
       memoryChunks.delete(id);
     }
   }
@@ -145,29 +175,26 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
   const dbStatus = getDatabaseStatus();
   if (pool && dbStatus.connected) {
     try {
-      await pool.query('DELETE FROM document_chunks WHERE document_id = $1', [documentId]);
-      await pool.query('DELETE FROM knowledge_documents WHERE id = $1', [documentId]);
-      return true;
+      await pool.query('DELETE FROM document_chunks WHERE document_id = $1;', [docId]);
+      await pool.query('DELETE FROM knowledge_documents WHERE id = $1;', [docId]);
     } catch (err: any) {
-      console.warn('[VectorStore] Error deleting document from PostgreSQL:', err.message);
+      console.warn(`[VectorStore] Error deleting document ${docId} from PostgreSQL:`, err.message);
     }
   }
-  return true;
 }
 
-// List all knowledge documents
 export async function listDocuments(): Promise<KnowledgeDocument[]> {
   const pool = getPool();
   const dbStatus = getDatabaseStatus();
   if (pool && dbStatus.connected) {
     try {
-      const res = await pool.query(`
-        SELECT d.*, COUNT(c.id)::int as "chunkCount"
-        FROM knowledge_documents d
-        LEFT JOIN document_chunks c ON d.id = c.document_id
-        GROUP BY d.id
-        ORDER BY d.created_at DESC
-      `);
+      const res = await pool.query(
+        `SELECT d.*, COUNT(c.id) as chunk_count
+         FROM knowledge_documents d
+         LEFT JOIN document_chunks c ON d.id = c.document_id
+         GROUP BY d.id
+         ORDER BY d.created_at ASC;`
+      );
       return res.rows.map((r: any) => ({
         id: r.id,
         title: r.title,
@@ -177,19 +204,17 @@ export async function listDocuments(): Promise<KnowledgeDocument[]> {
         approvalStatus: r.approval_status,
         version: r.version,
         status: r.status,
-        chunkCount: r.chunkCount,
+        chunkCount: parseInt(r.chunk_count || '0', 10),
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       }));
     } catch (err: any) {
-      console.warn('[VectorStore] Error fetching documents from PostgreSQL, using memory store:', err.message);
+      console.warn('[VectorStore] Error reading documents from PostgreSQL, falling back to memory:', err.message);
     }
   }
-
   return Array.from(memoryDocuments.values());
 }
 
-// Search chunks using pgvector (if available) and hybrid cosine similarity
 export async function searchChunks(
   queryVector: number[],
   queryText: string,
@@ -198,8 +223,6 @@ export async function searchChunks(
 ): Promise<SearchResult[]> {
   const pool = getPool();
   const dbStatus = getDatabaseStatus();
-
-  // Try pgvector in PostgreSQL if available
   if (pool && dbStatus.connected && dbStatus.pgvector && queryVector.length > 0) {
     try {
       const vectorStr = `[${queryVector.join(',')}]`;
@@ -240,7 +263,6 @@ export async function searchChunks(
     }
   }
 
-  // Memory/Local hybrid search: computes vector cosine similarity + lexical keyword relevance
   const stopWords = new Set(['what', 'is', 'are', 'the', 'of', 'in', 'and', 'to', 'for', 'a', 'an', 'your', 'tell', 'me', 'how', 'can', 'i', 'do']);
   const rawTokens = queryText.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
   const keyTokens = rawTokens.filter((t) => !stopWords.has(t) && t.length > 2);
@@ -249,7 +271,6 @@ export async function searchChunks(
   const results: SearchResult[] = [];
 
   for (const chunk of memoryChunks.values()) {
-    // Only search public & approved documents
     const parentDoc = memoryDocuments.get(chunk.documentId);
     if (parentDoc && (parentDoc.accessClassification !== 'public' || parentDoc.approvalStatus !== 'approved')) {
       continue;
@@ -260,8 +281,6 @@ export async function searchChunks(
       vectorScore = cosineSimilarity(queryVector, chunk.embedding);
     }
     const scaledVectorScore = Math.min(1.0, vectorScore * 2.2);
-
-    // Term matching score
     const chunkLower = chunk.content.toLowerCase();
     let matchCount = 0;
     for (const token of searchTokens) {
@@ -269,21 +288,15 @@ export async function searchChunks(
         matchCount++;
       }
     }
-
-    // If any substantive key tokens match, calculate score
     let tokenScore = 0;
     if (searchTokens.length > 0 && matchCount > 0) {
       tokenScore = 0.45 + (matchCount / searchTokens.length) * 0.55;
     }
-
-    // Hybrid combined score
     const combinedScore = Math.max(
       scaledVectorScore * 0.4 + tokenScore * 0.6,
       tokenScore,
       scaledVectorScore * 0.6
     );
-
-    // If the query has substantive search tokens but zero lexical match and weak vector score, prevent random hash noise match
     if (searchTokens.length > 0 && matchCount === 0 && vectorScore < 0.35) {
       continue;
     }
@@ -295,13 +308,199 @@ export async function searchChunks(
       });
     }
   }
-
-  // Sort by score descending
   results.sort((a, b) => b.score - a.score);
   return results.slice(0, topK);
 }
 
-// Get total count of indexed chunks
 export function getChunkCount(): number {
   return memoryChunks.size;
+}
+
+export interface ChunkRecord {
+  id: string;
+  documentId: string;
+  documentTitle: string;
+  content: string;
+}
+
+export async function listAllChunkRecords(): Promise<ChunkRecord[]> {
+  const pool = getPool();
+  const dbStatus = getDatabaseStatus();
+  if (pool && dbStatus.connected) {
+    const res = await pool.query(
+      `SELECT c.id, c.document_id, c.content, d.title
+       FROM document_chunks c JOIN knowledge_documents d ON d.id = c.document_id
+       ORDER BY c.document_id, c.chunk_index`
+    );
+    return res.rows.map((r: any) => ({
+      id: r.id,
+      documentId: r.document_id,
+      documentTitle: r.title,
+      content: r.content,
+    }));
+  }
+  return Array.from(memoryChunks.values()).map((c) => ({
+    id: c.id,
+    documentId: c.documentId,
+    documentTitle: c.documentTitle,
+    content: c.content,
+  }));
+}
+
+export async function setChunkEmbedding(chunkId: string, embedding: number[]): Promise<void> {
+  const memoryChunk = memoryChunks.get(chunkId);
+  if (memoryChunk) {
+    memoryChunk.embedding = embedding;
+  }
+
+  const pool = getPool();
+  const dbStatus = getDatabaseStatus();
+  if (pool && dbStatus.connected) {
+    if (dbStatus.pgvector) {
+      await pool.query('UPDATE document_chunks SET embedding = $2::vector WHERE id = $1', [
+        chunkId,
+        `[${embedding.join(',')}]`,
+      ]);
+    } else {
+      await pool.query('UPDATE document_chunks SET embedding_json = $2 WHERE id = $1', [
+        chunkId,
+        JSON.stringify(embedding),
+      ]);
+    }
+  }
+}
+
+export async function hydrateMemoryFromDatabase(): Promise<number> {
+  const pool = getPool();
+  const dbStatus = getDatabaseStatus();
+  if (!pool || !dbStatus.connected) return 0;
+
+  const docs = await pool.query('SELECT * FROM knowledge_documents');
+  for (const r of docs.rows) {
+    memoryDocuments.set(r.id, {
+      id: r.id,
+      title: r.title,
+      sourceType: r.source_type,
+      sourceReference: r.source_reference,
+      accessClassification: r.access_classification,
+      approvalStatus: r.approval_status,
+      version: r.version,
+      status: r.status,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    });
+  }
+
+  const chunks = await pool.query(
+    `SELECT c.id, c.document_id, c.chunk_index, c.content, c.page_number, c.metadata, c.embedding_json, d.title
+     FROM document_chunks c JOIN knowledge_documents d ON d.id = c.document_id`
+  );
+  for (const r of chunks.rows) {
+    memoryChunks.set(r.id, {
+      id: r.id,
+      documentId: r.document_id,
+      documentTitle: r.title,
+      chunkIndex: r.chunk_index,
+      content: r.content,
+      embedding: Array.isArray(r.embedding_json) ? r.embedding_json : [],
+      pageNumber: r.page_number,
+      metadata: r.metadata,
+    });
+  }
+
+  for (const doc of memoryDocuments.values()) {
+    doc.chunkCount = Array.from(memoryChunks.values()).filter((c) => c.documentId === doc.id).length;
+  }
+  return chunks.rows.length;
+}
+
+// Student Enquiry Persistence
+export async function saveEnquiry(enquiry: Omit<StudentEnquiry, 'id' | 'createdAt' | 'status'>): Promise<StudentEnquiry> {
+  const newEnquiry: StudentEnquiry = {
+    id: 'enq-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+    ...enquiry,
+    status: 'new',
+    createdAt: new Date(),
+  };
+  memoryEnquiries.set(newEnquiry.id, newEnquiry);
+
+  const pool = getPool();
+  const dbStatus = getDatabaseStatus();
+  if (pool && dbStatus.connected) {
+    try {
+      await pool.query(
+        `INSERT INTO enquiries (id, name, email, phone, course_interest, message, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`,
+        [newEnquiry.id, newEnquiry.name, newEnquiry.email, newEnquiry.phone, newEnquiry.courseInterest, newEnquiry.message || '', newEnquiry.status, newEnquiry.createdAt]
+      );
+    } catch (err: any) {
+      console.warn('[VectorStore] Error writing enquiry to DB:', err.message);
+    }
+  }
+  return newEnquiry;
+}
+
+export async function listEnquiries(): Promise<StudentEnquiry[]> {
+  const pool = getPool();
+  const dbStatus = getDatabaseStatus();
+  if (pool && dbStatus.connected) {
+    try {
+      const res = await pool.query('SELECT * FROM enquiries ORDER BY created_at DESC LIMIT 100;');
+      if (res.rows.length > 0) {
+        return res.rows.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          phone: r.phone,
+          courseInterest: r.course_interest,
+          message: r.message,
+          status: r.status,
+          createdAt: r.created_at,
+        }));
+      }
+    } catch (err: any) {
+      console.warn('[VectorStore] Error reading enquiries from DB:', err.message);
+    }
+  }
+  return Array.from(memoryEnquiries.values()).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+// Unanswered Query Tracking
+export async function logUnansweredQuery(query: string): Promise<void> {
+  const log: UnansweredQueryLog = {
+    id: 'unans-' + Date.now(),
+    query,
+    createdAt: new Date(),
+  };
+  memoryUnansweredQueries.push(log);
+
+  const pool = getPool();
+  const dbStatus = getDatabaseStatus();
+  if (pool && dbStatus.connected) {
+    try {
+      await pool.query('INSERT INTO unanswered_queries (id, query, created_at) VALUES ($1, $2, $3);', [log.id, log.query, log.createdAt]);
+    } catch (err: any) {
+      console.warn('[VectorStore] Error logging unanswered query to DB:', err.message);
+    }
+  }
+}
+
+export async function listUnansweredQueries(): Promise<UnansweredQueryLog[]> {
+  const pool = getPool();
+  const dbStatus = getDatabaseStatus();
+  if (pool && dbStatus.connected) {
+    try {
+      const res = await pool.query('SELECT * FROM unanswered_queries ORDER BY created_at DESC LIMIT 100;');
+      if (res.rows.length > 0) {
+        return res.rows.map((r: any) => ({
+          id: r.id,
+          query: r.query,
+          createdAt: r.created_at,
+        }));
+      }
+    } catch (err: any) {
+      console.warn('[VectorStore] Error reading unanswered queries from DB:', err.message);
+    }
+  }
+  return [...memoryUnansweredQueries].reverse();
 }

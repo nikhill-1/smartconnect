@@ -1,6 +1,8 @@
 import { getEmbedding } from './embeddingService';
 import { searchChunks, SearchResult } from '../db/vectorStore';
-import { generateAnswer } from './llmService';
+import { generateAnswer, looksCollegeRelated, outOfScopeAnswer } from './llmService';
+import { runChatTools, ChatLink } from './chatTools';
+import { StudentSession } from './authService';
 import { config } from '../config';
 
 export interface ChatSourceCitation {
@@ -16,16 +18,15 @@ export interface ChatResponse {
   sources: ChatSourceCitation[];
   confidence: number;
   status: 'grounded' | 'fallback' | 'conversational';
+  scope: 'college' | 'student' | 'out_of_scope';
   provider?: string;
+  links?: ChatLink[];
+  requiresLogin?: boolean;
+  loggedIn: boolean;
 }
 
-/**
- * Normalizes colloquial or typo-heavy visitor queries
- */
 export function normalizeQuery(query: string): string {
   let normalized = query.trim().toLowerCase();
-
-  // Common contractions and typos
   const replacements: Record<string, string> = {
     'whats': 'what is',
     'what\'s': 'what is',
@@ -57,15 +58,15 @@ export function normalizeQuery(query: string): string {
   return normalized;
 }
 
-/**
- * Detects common conversational greetings and farewells (preserving existing chatbot behavior)
- */
-export function checkConversationalGreeting(text: string): string | null {
+export function checkConversationalGreeting(text: string, session: StudentSession | null = null): string | null {
   const clean = text.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  const firstName = session ? session.name.split(/\s+/)[0] : null;
 
   const greetings = ['hi', 'hello', 'hey', 'hi there', 'greetings'];
   if (greetings.includes(clean)) {
-    return 'Hello! Welcome to TRR Group of Institutions. How can I help you today? You can ask about our college timings, admissions, courses, fees, or leadership.';
+    return `Hello${firstName ? ' ' + firstName : ''}! Welcome to TRR Group of Institutions. How can I help you today? You can ask about our college timings, admissions, courses, fees, circulars${
+      session ? ', or your own marks and attendance' : ''
+    }.`;
   }
 
   const howAreYou = ['how are you', 'how is life', 'how are things', 'how are you doing'];
@@ -75,7 +76,7 @@ export function checkConversationalGreeting(text: string): string | null {
 
   const identity = ['who are you', 'are you bot', 'what is your name', 'your name', 'who created you'];
   if (identity.some((k) => clean.includes(k))) {
-    return "I am SmartConnect, the AI-Powered Information Assistant for TRR Group of Institutions, Hyderabad.";
+    return 'I am SmartConnect, the AI-Powered Information Assistant for TRR Group of Institutions, Hyderabad.';
   }
 
   const farewells = ['bye', 'goodbye', 'see you', 'good night', 'take care'];
@@ -86,22 +87,22 @@ export function checkConversationalGreeting(text: string): string | null {
   return null;
 }
 
-/**
- * Main RAG processing pipeline
- */
 export async function processChatQuery(
   question: string,
-  conversationHistory?: { role: 'user' | 'assistant'; text: string }[]
+  conversationHistory?: { role: 'user' | 'assistant'; text: string }[],
+  session: StudentSession | null = null
 ): Promise<ChatResponse> {
   const trimmed = question.trim();
+  const loggedIn = !!session;
 
-  // 1. Validation
   if (!trimmed) {
     return {
       answer: 'Please enter a question to get information about the college.',
       sources: [],
       confidence: 0,
       status: 'fallback',
+      scope: 'college',
+      loggedIn,
     };
   }
 
@@ -111,26 +112,88 @@ export async function processChatQuery(
       sources: [],
       confidence: 0,
       status: 'fallback',
+      scope: 'college',
+      loggedIn,
     };
   }
 
-  // 2. Quick conversational greeting check
-  const directGreeting = checkConversationalGreeting(trimmed);
+  const directGreeting = checkConversationalGreeting(trimmed, session);
   if (directGreeting) {
     return {
       answer: directGreeting,
       sources: [],
       confidence: 1.0,
       status: 'conversational',
+      scope: 'college',
       provider: 'TRR SmartConnect Conversational Handler',
+      loggedIn,
     };
   }
 
-  // 3. Normalization and embedding
   const normalizedText = normalizeQuery(trimmed);
-  const queryVector = await getEmbedding(normalizedText);
 
-  // 4. Retrieve candidate chunks from pgvector / vector store
+  const tool = await runChatTools(normalizedText, session);
+
+  if (tool?.requiresLogin) {
+    return {
+      answer: 'Please log in with your student PIN to view your personal marks and attendance. I can still answer general questions about the college without logging in.',
+      sources: [],
+      confidence: 1,
+      status: 'fallback',
+      scope: 'student',
+      requiresLogin: true,
+      provider: 'TRR Access Control',
+      loggedIn,
+    };
+  }
+
+  if (!looksCollegeRelated(normalizedText) && !tool) {
+    return {
+      answer: outOfScopeAnswer(loggedIn),
+      sources: [],
+      confidence: 0,
+      status: 'fallback',
+      scope: 'out_of_scope',
+      provider: 'TRR Scope Guard',
+      loggedIn,
+    };
+  }
+
+  if (tool?.directAnswer && !tool.privateContext) {
+    return {
+      answer: tool.directAnswer,
+      sources: tool.sourceTitle ? [{ id: tool.toolId, documentTitle: tool.sourceTitle, score: 1 }] : [],
+      confidence: 1,
+      status: 'grounded',
+      scope: 'college',
+      provider: 'TRR Live Records',
+      links: tool.links,
+      loggedIn,
+    };
+  }
+
+  if (tool?.privateContext) {
+    const result = await generateAnswer({
+      question: trimmed,
+      evidence: [],
+      studentContext: tool.privateContext,
+      loggedIn,
+      conversationHistory,
+      fallbackAnswer: tool.directAnswer,
+    });
+    return {
+      answer: result.answer,
+      sources: [{ id: tool.toolId, documentTitle: tool.sourceTitle || 'Your academic record', score: 1 }],
+      confidence: 1,
+      status: 'grounded',
+      scope: 'student',
+      provider: result.provider,
+      loggedIn,
+    };
+  }
+
+  const queryVector = await getEmbedding(normalizedText, 'query');
+
   const results: SearchResult[] = await searchChunks(
     queryVector,
     normalizedText,
@@ -138,27 +201,32 @@ export async function processChatQuery(
     config.relevanceThreshold
   );
 
-  // 5. Evidence check
   if (results.length === 0) {
+    const result = await generateAnswer({
+      question: trimmed,
+      evidence: [],
+      loggedIn,
+      conversationHistory,
+    });
     return {
-      answer:
-        'I could not find verified information in official college records to answer that question. For further assistance, please contact the TRR Help Desk at 9154364306 or visit our campus in Pragathi Colony, Meerpet, Hyderabad.',
+      answer: result.answer,
       sources: [],
       confidence: 0,
       status: 'fallback',
-      provider: 'TRR Grounded Fallback',
+      scope: result.scope === 'out_of_scope' ? 'out_of_scope' : 'college',
+      provider: result.provider,
+      loggedIn,
     };
   }
 
-  // 6. Grounded Answer Generation
   const evidenceTexts = results.map((r) => r.chunk.content);
   const answerResult = await generateAnswer({
     question: trimmed,
     evidence: evidenceTexts,
+    loggedIn,
     conversationHistory,
   });
 
-  // 7. Format source citations
   const sources: ChatSourceCitation[] = results.map((r) => ({
     id: r.chunk.id,
     documentTitle: r.chunk.documentTitle,
@@ -167,13 +235,26 @@ export async function processChatQuery(
     score: Math.round(r.score * 100) / 100,
   }));
 
-  const maxConfidence = results.length > 0 ? results[0].score : 0;
+  const circularLinks: ChatLink[] = [];
+  const seen = new Set<string>();
+  for (const r of results) {
+    const match = /^circular-(\d+)-chunk-/.exec(r.chunk.id);
+    if (match && !seen.has(match[1])) {
+      seen.add(match[1]);
+      circularLinks.push({ label: r.chunk.documentTitle.replace(/^Circular:\s*/, ''), url: `/notices/${match[1]}` });
+    }
+  }
+
+  const maxConfidence = results[0].score;
 
   return {
     answer: answerResult.answer,
     sources,
     confidence: Math.round(maxConfidence * 100) / 100,
     status: answerResult.isFallback ? 'fallback' : 'grounded',
+    scope: 'college',
     provider: answerResult.provider,
+    links: circularLinks.length > 0 ? circularLinks : undefined,
+    loggedIn,
   };
 }

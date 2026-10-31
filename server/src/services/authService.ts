@@ -13,9 +13,16 @@ export interface AuthTokenPayload {
   userId: string;
   username: string;
   role: string;
+  studentId?: number;
+  pin?: string;
 }
 
-// Generate JWT token for admin session
+export interface StudentSession {
+  studentId: number;
+  pin: string;
+  name: string;
+}
+
 export function generateToken(user: AdminUser): string {
   return jwt.sign(
     {
@@ -24,11 +31,24 @@ export function generateToken(user: AdminUser): string {
       role: user.role,
     },
     config.jwtSecret,
-    { expiresIn: '24h' }
+    { expiresIn: config.adminSessionExpiresIn as jwt.SignOptions['expiresIn'] }
   );
 }
 
-// Verify credentials (replaces insecure client-side admin.js check)
+export function generateStudentToken(student: { id: number; pin: string; name: string }): string {
+  return jwt.sign(
+    {
+      userId: `student-${student.id}`,
+      username: student.name,
+      role: 'student',
+      studentId: student.id,
+      pin: student.pin,
+    },
+    config.jwtSecret,
+    { expiresIn: config.studentSessionExpiresIn as jwt.SignOptions['expiresIn'] }
+  );
+}
+
 export async function authenticateAdmin(username: string, password: string): Promise<AdminUser | null> {
   const expectedUser = config.adminUsername;
   const expectedPass = config.adminPassword;
@@ -37,7 +57,6 @@ export async function authenticateAdmin(username: string, password: string): Pro
     return null;
   }
 
-  // Check password - supports both direct match during initial configuration and bcrypt hash
   const isMatch = password === expectedPass || (await bcrypt.compare(password, expectedPass).catch(() => false));
   if (!isMatch) {
     return null;
@@ -50,9 +69,9 @@ export async function authenticateAdmin(username: string, password: string): Pro
   };
 }
 
-// Express authentication middleware for protected routes
 export interface AuthenticatedRequest extends Request {
   user?: AuthTokenPayload;
+  student?: StudentSession;
 }
 
 export function requireAdminAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
@@ -68,6 +87,13 @@ export function requireAdminAuth(req: AuthenticatedRequest, res: Response, next:
   const token = authHeader.substring(7);
   try {
     const decoded = jwt.verify(token, config.jwtSecret) as AuthTokenPayload;
+    if (decoded.role !== 'administrator') {
+      res.status(403).json({
+        success: false,
+        error: 'Administrator access is required.',
+      });
+      return;
+    }
     req.user = decoded;
     next();
   } catch (err) {
@@ -78,7 +104,6 @@ export function requireAdminAuth(req: AuthenticatedRequest, res: Response, next:
   }
 }
 
-// Audited course PIN mappings for authenticated administrators (protected from public exposure)
 export const AUDITED_COURSE_PIN_REGISTRY: Record<string, { pin: string; courseName: string; spreadsheetUrl: string }> = {
   '22124-cs-160': {
     pin: '22124-cs-160',
@@ -101,3 +126,62 @@ export const AUDITED_COURSE_PIN_REGISTRY: Record<string, { pin: string; courseNa
     spreadsheetUrl: 'https://1drv.ms/x/c/76bcd8d7c93fffca/EVbOmXoAPWZPlvKRvvth8aMBPyANks0ETncA2y64m0Hr9g?e=0nqzDY',
   },
 };
+
+
+function decodeStudentToken(header: string | undefined): StudentSession | null {
+  if (!header || !header.startsWith('Bearer ')) return null;
+  const decoded = jwt.verify(header.substring(7), config.jwtSecret) as AuthTokenPayload;
+  if (decoded.role !== 'student' || !decoded.studentId || !decoded.pin) return null;
+  return { studentId: decoded.studentId, pin: decoded.pin, name: decoded.username };
+}
+
+export function requireStudentAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  try {
+    const session = decodeStudentToken(req.headers.authorization);
+    if (!session) {
+      res.status(401).json({ success: false, error: 'Student login required.' });
+      return;
+    }
+    req.student = session;
+    next();
+  } catch {
+    res.status(401).json({ success: false, error: 'Your session has expired. Please log in again.' });
+  }
+}
+
+export function readOptionalStudentSession(header: string | undefined): { session: StudentSession | null; expired: boolean } {
+  if (!header) return { session: null, expired: false };
+  try {
+    return { session: decodeStudentToken(header), expired: false };
+  } catch {
+    return { session: null, expired: true };
+  }
+}
+
+const failedLogins = new Map<string, { count: number; lockedUntil: number }>();
+
+export function isLoginLocked(key: string): number {
+  const entry = failedLogins.get(key);
+  if (!entry) return 0;
+  if (entry.lockedUntil > Date.now()) {
+    return Math.ceil((entry.lockedUntil - Date.now()) / 60000);
+  }
+  if (entry.lockedUntil !== 0) {
+    failedLogins.delete(key);
+  }
+  return 0;
+}
+
+export function recordLoginFailure(key: string): void {
+  const entry = failedLogins.get(key) || { count: 0, lockedUntil: 0 };
+  entry.count += 1;
+  if (entry.count >= config.loginMaxAttempts) {
+    entry.lockedUntil = Date.now() + config.loginLockMinutes * 60000;
+    entry.count = 0;
+  }
+  failedLogins.set(key, entry);
+}
+
+export function clearLoginFailures(key: string): void {
+  failedLogins.delete(key);
+}

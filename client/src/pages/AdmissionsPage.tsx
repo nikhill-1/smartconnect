@@ -1,11 +1,13 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
 import { Header } from '../components/Header';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { AiBanner } from '../components/AiBanner';
+import { AdmissionEnquiryModal } from '../components/AdmissionEnquiryModal';
 
 export const AdmissionsPage: React.FC = () => {
+  const [modalCourse, setModalCourse] = useState<string | null>(null);
+
   return (
     <>
       <Header />
@@ -13,7 +15,7 @@ export const AdmissionsPage: React.FC = () => {
 
       <main>
         <img src="/add.jpg" alt="TRR Admissions" id="imm" />
-        <h1 id="h24">Admission Requirment</h1>
+        <h1 id="h24">Admission Requirements &amp; Eligibility</h1>
 
         <div className="p55">
           <div className="h12">
@@ -21,23 +23,22 @@ export const AdmissionsPage: React.FC = () => {
               <img src="/engg.jpg" alt="Engineering" />
               <h1>ENGINEERING</h1>
               <h4>
-                BTECH CSE/INF : <br />
-                - EAPCET : For 1st Year Admission<br />
-                - ECET : For 2nd Year Admission<br />
-                70% Seats filled through EAPCET Rank<br />
-                30% Seats Filled through Management (Based on Inter Marks)<br />
-                CATEGORY A : (70% - Seats)<br />
-                CATEGORY B : (30% - Seats)<br />
-                - Test : TS-EAMCET / TS -EMCETD<br />
-                - Eligibility : +12 / Inter (MPC) / Polytechnic<br />
-                - Duration : 4 Years<br />
-                - Test : TS-CHE<br />
-                - Eligibility : +12 / Inter (MPC)
+                BTECH CSE / INF / ECE / ME / CE: <br />
+                - TS EAPCET: For 1st Year Admission<br />
+                - ECET: For 2nd Year Lateral Entry Admission<br />
+                70% Seats filled through EAPCET Convener Quota<br />
+                30% Seats Filled through Management (Based on Intermediate Marks)<br /><br />
+                CATEGORY A: (70% - Convener Seats)<br />
+                - Entrance Test: TS-EAMCET / TS-EAPCET<br />
+                - Eligibility: +12 / Intermediate (MPC) / Diploma<br />
+                - Duration: 4 Years (3 Years Lateral)<br /><br />
+                CATEGORY B: (30% - Management Seats)<br />
+                - Eligibility: +12 / Intermediate (MPC) minimum 45% marks
               </h4>
             </div>
-            <Link to="/contact">
-              <button>Apply Now</button>
-            </Link>
+            <button onClick={() => setModalCourse('B.Tech Engineering')}>
+              Apply Now
+            </button>
           </div>
 
           <div className="h13">
@@ -45,27 +46,23 @@ export const AdmissionsPage: React.FC = () => {
               <img src="/pharm.jpg" alt="Pharmacy" />
               <h1>PHARMACY</h1>
               <h4>
-                PHARMACY <br />
-                B PHARM : <br />
-                70% Seats filled through EAPCET Rank <br />
-                30% Seats Filled through Management (Based on Inter Marks) <br />
-                CATEGORY A : (70% - Seats) <br />
-                CATEGORY B : (30% - Seats) <br />
-                - Test : TS-EAMCET / TS -EMCETD <br />
-                - Eligibility : +12 / Inter (BiPC) / Polytechnic <br />
-                - Duration : 4 Years <br />
-                - Test : TS-CHE <br />
-                - Eligibility : +12 / Inter (BiPC) <br />
-                - Duration : 4 Years <br />
-                - EAPCET : For 1st Year Admission <br />
-                - ECET : For 2nd Year Admission <br />
-                M PHARM : <br />
-                - GPAT / TS PGCET
+                B.PHARM (Bachelor of Pharmacy): <br />
+                70% Seats filled through TS EAPCET Rank<br />
+                30% Seats Filled through Management (Based on Inter Marks)<br /><br />
+                CATEGORY A: (70% - Seats)<br />
+                CATEGORY B: (30% - Seats)<br />
+                - Entrance Test: TS-EAMCET / TS-EAPCET<br />
+                - Eligibility: +12 / Intermediate (BiPC or MPC)<br />
+                - Duration: 4 Years<br /><br />
+                M.PHARM (Master of Pharmacy):<br />
+                - Entrance Test: GPAT / TS PGCET<br />
+                - Eligibility: B.Pharm degree recognized by PCI<br />
+                - Duration: 2 Years
               </h4>
             </div>
-            <Link to="/contact">
-              <button>Apply Now</button>
-            </Link>
+            <button onClick={() => setModalCourse('Bachelor of Pharmacy (B.Pharm)')}>
+              Apply Now
+            </button>
           </div>
 
           <div className="h14">
@@ -73,21 +70,32 @@ export const AdmissionsPage: React.FC = () => {
               <img src="/poly.jpg" alt="Polytechnic" />
               <h1>POLYTECHNIC</h1>
               <h4>
-                DIPLOMA <br />
-                (Civil/ Computer/ Electronics &amp; Communication/ Electrical &amp; Electronics/ Mechanical) : <br /><br />
-                - Test POLYCET <br />
-                - Eligibility : +10 / Inter (MPC) <br />
-                - Duration : 3 Years
+                DIPLOMA (3-Year Technical Engineering): <br />
+                (Civil / Computer / ECE / EEE / Mechanical)<br /><br />
+                - Entrance Test: POLYCET<br />
+                - Eligibility: 10th Class / SSC Pass with Maths &amp; Science<br />
+                - Duration: 3 Years<br />
+                - Accreditation: NBA Certified in 2024<br />
+                - Annual Tuition Fee: ~Rs. 12,600 / Year (Counseling Quota)<br />
+                - Government Fee Reimbursement applicable for eligible students
               </h4>
             </div>
-            <Link to="/polytechnic">
-              <button>Apply Now</button>
-            </Link>
+            <button onClick={() => setModalCourse('Polytechnic Diploma')}>
+              Apply Now
+            </button>
           </div>
         </div>
 
         <AiBanner />
       </main>
+
+      {modalCourse && (
+        <AdmissionEnquiryModal
+          isOpen={true}
+          defaultCourse={modalCourse}
+          onClose={() => setModalCourse(null)}
+        />
+      )}
 
       <Footer />
     </>

@@ -58,17 +58,14 @@ async function runTests() {
 
   // Test: Principal
   const principalRes = await processChatQuery('who is the principal?');
-  console.log('DEBUG principalRes:', JSON.stringify(principalRes));
   assert(principalRes.answer.toLowerCase().includes('vishal khanna'), 'Chatbot accurately identifies Principal Vishal Khanna');
 
   // Test: Courses offered
   const coursesRes = await processChatQuery('what courses are offered by the college?');
-  console.log('DEBUG coursesRes:', JSON.stringify(coursesRes));
   assert(coursesRes.answer.includes('CSE') && coursesRes.answer.includes('Pharmacy') && coursesRes.answer.includes('Polytechnic'), 'Chatbot lists Engineering, Pharmacy, and Polytechnic courses');
 
   // Test: Admission documents
   const docsRes = await processChatQuery('what documents are needed for admission?');
-  console.log('DEBUG docsRes:', JSON.stringify(docsRes));
   assert(
     Boolean(
       docsRes.answer.includes('Rank Card') ||
@@ -81,7 +78,11 @@ async function runTests() {
   // Test: Safe fallback for completely unrelated question
   const fallbackRes = await processChatQuery('what is the distance to Mars?');
   assert(
-    Boolean(fallbackRes.status === 'fallback' && fallbackRes.answer.includes('could not find verified information')),
+    Boolean(
+      fallbackRes.status === 'fallback' &&
+      fallbackRes.scope === 'out_of_scope' &&
+      fallbackRes.answer.toLowerCase().includes('trr')
+    ),
     'Chatbot triggers safe fallback for out-of-scope query'
   );
 

@@ -596,3 +596,164 @@ footer {
   color: white;
   box-shadow: 0 4px 12px rgba(46, 86, 221, 0.4);
 }
+
+/* Mobile Navigation & Responsive Media Queries */
+.mobile-hamburger-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  color: #1A4A95;
+  cursor: pointer;
+  padding: 10px 16px;
+  line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .mobile-hamburger-btn {
+    display: block;
+    margin: 6px auto;
+  }
+
+  nav {
+    flex-direction: column;
+    padding: 6px 0;
+  }
+
+  #jss {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    padding: 10px 0;
+  }
+
+  #jss.nav-mobile-open {
+    display: flex;
+  }
+
+  #jss li {
+    width: 90%;
+    margin: 4px auto;
+    text-align: center;
+  }
+
+  #jss li a {
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  .heade {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+    padding: 10px;
+  }
+
+  .heade-brand {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  #hh1 {
+    margin-left: 0;
+    margin-top: 10px;
+    font-size: 20px;
+  }
+
+  .mm {
+    margin-left: 0;
+  }
+
+  #lki {
+    height: 44px;
+    min-width: 130px;
+    font-size: 13px;
+  }
+
+  #imm {
+    max-height: 240px !important;
+  }
+
+  #h22 {
+    font-size: 24px;
+    margin-top: 25px;
+  }
+
+  #h23 {
+    font-size: 16px;
+    padding: 0 15px;
+  }
+
+  .TKR, .TNR {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+    padding: 0 15px;
+  }
+
+  .TKR p, .TNR p {
+    font-size: 15px;
+    line-height: 1.6;
+    min-width: unset;
+    text-align: justify;
+  }
+
+  .TKR img, .TNR img {
+    width: 200px;
+    height: 250px;
+  }
+
+  .ddd img {
+    height: 70px;
+    margin: 10px 15px;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+
+  .mmk {
+    text-align: center;
+  }
+
+  #ai {
+    font-size: 18px;
+    padding: 20px 15px;
+    gap: 15px;
+    flex-direction: column;
+  }
+
+  .login-card {
+    width: 90%;
+    max-width: 340px;
+    margin: 40px auto;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  #hh1 {
+    font-size: 18px;
+  }
+
+  #hh1 small {
+    font-size: 11px;
+  }
+
+  .par {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .TKR img, .TNR img {
+    width: 170px;
+    height: 210px;
+  }
+
+  .footer-links-bar p {
+    flex-direction: column;
+    gap: 8px;
+  }
+}

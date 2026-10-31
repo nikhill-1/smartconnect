@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { getDatabaseStatus } from '../db/connection';
 import { getChunkCount } from '../db/vectorStore';
 import { config } from '../config';
+import { getGeminiStatus } from '../services/llmService';
+import { getEmbeddingSignature } from '../services/embeddingService';
 
 export const healthRouter = Router();
 
@@ -11,6 +13,7 @@ export const healthRouter = Router();
 healthRouter.get('/health', (_req: Request, res: Response) => {
   const dbStatus = getDatabaseStatus();
   const chunkCount = getChunkCount();
+  const gemini = getGeminiStatus();
 
   res.json({
     status: 'healthy',
@@ -24,8 +27,10 @@ healthRouter.get('/health', (_req: Request, res: Response) => {
       indexedChunks: chunkCount,
     },
     ai: {
-      provider: config.geminiApiKey ? 'Google Gemini (' + config.geminiModel + ')' : 'TRR Grounded Evidence Synthesizer',
-      embeddingProvider: config.geminiApiKey ? 'Google Gemini (' + config.geminiEmbeddingModel + ')' : 'Semantic Deterministic Vectorizer',
+      provider: gemini.configured ? 'Google Gemini (' + config.geminiModel + ')' : 'TRR Grounded Evidence Synthesizer',
+      embeddingProvider: gemini.configured ? 'Google Gemini (' + config.geminiEmbeddingModel + ')' : 'Semantic Deterministic Vectorizer',
+      embeddingSignature: getEmbeddingSignature(),
+      gemini,
     },
   });
 });

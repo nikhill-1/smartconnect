@@ -10,12 +10,18 @@ import {
   reindexAdminDocument,
   deleteAdminDocument,
   lookupSpreadsheet,
+  fetchAdminEnquiries,
+  fetchAdminUnansweredQueries,
   AdminDocument,
+  EnquirySubmission,
+  UnansweredQueryLog,
 } from '../services/api';
 
 export const AdminDashboardPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'documents' | 'spreadsheets'>('documents');
+  const [activeTab, setActiveTab] = useState<'documents' | 'enquiries' | 'unanswered' | 'spreadsheets'>('documents');
   const [documents, setDocuments] = useState<AdminDocument[]>([]);
+  const [enquiries, setEnquiries] = useState<EnquirySubmission[]>([]);
+  const [unanswered, setUnanswered] = useState<UnansweredQueryLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -41,20 +47,26 @@ export const AdminDashboardPage: React.FC = () => {
       navigate('/admin');
       return;
     }
-    loadDocuments();
+    loadData();
   }, [navigate]);
 
-  const loadDocuments = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const docs = await fetchAdminDocuments();
+      const [docs, enqs, unans] = await Promise.all([
+        fetchAdminDocuments().catch(() => []),
+        fetchAdminEnquiries().catch(() => []),
+        fetchAdminUnansweredQueries().catch(() => []),
+      ]);
       setDocuments(docs);
+      setEnquiries(enqs);
+      setUnanswered(unans);
     } catch (err: any) {
-      if (err.message.includes('Unauthorized')) {
+      if (err.message?.includes('Unauthorized')) {
         authStorage.removeToken();
         navigate('/admin');
       } else {
-        setMessage('Error loading knowledge documents: ' + err.message);
+        setMessage('Error loading admin data: ' + err.message);
       }
     } finally {
       setLoading(false);
@@ -67,6 +79,22 @@ export const AdminDashboardPage: React.FC = () => {
     navigate('/admin');
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!newTitle) {
+      setNewTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setNewContent(text);
+    };
+    reader.readAsText(file);
+  };
+
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newContent) return;
@@ -76,7 +104,7 @@ export const AdminDashboardPage: React.FC = () => {
       const res = await uploadAdminDocument({
         title: newTitle,
         sourceType: newType,
-        sourceReference: newReference || 'Admin Manual Ingestion',
+        sourceReference: newReference || 'Admin Ingestion Portal',
         content: newContent,
       });
 
@@ -85,7 +113,7 @@ export const AdminDashboardPage: React.FC = () => {
       setNewTitle('');
       setNewReference('');
       setNewContent('');
-      await loadDocuments();
+      await loadData();
     } catch (err: any) {
       alert('Upload failed: ' + err.message);
     } finally {
@@ -97,7 +125,7 @@ export const AdminDashboardPage: React.FC = () => {
     try {
       const res = await reindexAdminDocument(id);
       setMessage(res.message);
-      await loadDocuments();
+      await loadData();
     } catch (err: any) {
       alert('Reindex failed: ' + err.message);
     }
@@ -110,7 +138,7 @@ export const AdminDashboardPage: React.FC = () => {
     try {
       const res = await deleteAdminDocument(id);
       setMessage(res.message);
-      await loadDocuments();
+      await loadData();
     } catch (err: any) {
       alert('Delete failed: ' + err.message);
     }
@@ -190,45 +218,75 @@ export const AdminDashboardPage: React.FC = () => {
         )}
 
         {/* Tab selection */}
-        <div style={{ display: 'flex', gap: '12px', margin: '25px 0 20px 0', borderBottom: '1px solid #cbd5e1' }}>
+        <div style={{ display: 'flex', gap: '12px', margin: '25px 0 20px 0', borderBottom: '1px solid #cbd5e1', flexWrap: 'wrap' }}>
           <button
             onClick={() => setActiveTab('documents')}
             style={{
-              padding: '10px 20px',
+              padding: '10px 18px',
               border: 'none',
               background: 'none',
               borderBottom: activeTab === 'documents' ? '3px solid #2E56DD' : 'none',
               color: activeTab === 'documents' ? '#2E56DD' : '#64748b',
               fontWeight: 700,
               cursor: 'pointer',
-              fontSize: '16px',
+              fontSize: '15px',
             }}
           >
             📚 Knowledge Documents ({documents.length})
           </button>
           <button
+            onClick={() => setActiveTab('enquiries')}
+            style={{
+              padding: '10px 18px',
+              border: 'none',
+              background: 'none',
+              borderBottom: activeTab === 'enquiries' ? '3px solid #2E56DD' : 'none',
+              color: activeTab === 'enquiries' ? '#2E56DD' : '#64748b',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontSize: '15px',
+            }}
+          >
+            📋 Admission Enquiries ({enquiries.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('unanswered')}
+            style={{
+              padding: '10px 18px',
+              border: 'none',
+              background: 'none',
+              borderBottom: activeTab === 'unanswered' ? '3px solid #2E56DD' : 'none',
+              color: activeTab === 'unanswered' ? '#2E56DD' : '#64748b',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontSize: '15px',
+            }}
+          >
+            ❓ Unanswered Queries ({unanswered.length})
+          </button>
+          <button
             onClick={() => setActiveTab('spreadsheets')}
             style={{
-              padding: '10px 20px',
+              padding: '10px 18px',
               border: 'none',
               background: 'none',
               borderBottom: activeTab === 'spreadsheets' ? '3px solid #2E56DD' : 'none',
               color: activeTab === 'spreadsheets' ? '#2E56DD' : '#64748b',
               fontWeight: 700,
               cursor: 'pointer',
-              fontSize: '16px',
+              fontSize: '15px',
             }}
           >
-            📊 Course Spreadsheets &amp; PIN Lookup
+            📊 Course Spreadsheets
           </button>
         </div>
 
         {/* TAB 1: KNOWLEDGE DOCUMENTS */}
         {activeTab === 'documents' && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
               <p style={{ color: '#475569', margin: 0, fontSize: '15px' }}>
-                Manage approved institutional sources indexed in PostgreSQL/vector store.
+                Manage approved institutional knowledge sources indexed in the vector store for chatbot retrieval.
               </p>
               <button
                 onClick={() => setShowUploadModal(true)}
@@ -310,7 +368,124 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 2: AUDITED COURSE SPREADSHEETS */}
+        {/* TAB 2: ADMISSION ENQUIRIES */}
+        {activeTab === 'enquiries' && (
+          <div style={{ background: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h2 style={{ color: '#1A4A95', margin: 0 }}>Prospective Student Enquiries</h2>
+              <button
+                onClick={loadData}
+                style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                Refresh
+              </button>
+            </div>
+            <p style={{ color: '#64748b', fontSize: '14px', marginTop: 0 }}>
+              Direct submissions received through the website admission inquiry portal.
+            </p>
+
+            {enquiries.length === 0 ? (
+              <p style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>No enquiries submitted yet.</p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#334155' }}>
+                      <th style={{ padding: '12px 14px' }}>Applicant</th>
+                      <th style={{ padding: '12px 14px' }}>Contact</th>
+                      <th style={{ padding: '12px 14px' }}>Program / Branch</th>
+                      <th style={{ padding: '12px 14px' }}>Message / Queries</th>
+                      <th style={{ padding: '12px 14px' }}>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {enquiries.map((enq) => (
+                      <tr key={enq.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '12px 14px', fontWeight: 600, color: '#1e293b' }}>{enq.name}</td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <div><a href={`mailto:${enq.email}`} style={{ color: '#2563eb' }}>{enq.email}</a></div>
+                          <div style={{ color: '#64748b', fontSize: '13px' }}>📞 {enq.phone}</div>
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 600 }}>
+                            {enq.courseInterest}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', color: '#475569', maxWidth: '300px' }}>
+                          {enq.message || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>None</span>}
+                        </td>
+                        <td style={{ padding: '12px 14px', color: '#64748b', fontSize: '12px' }}>
+                          {new Date(enq.createdAt).toLocaleDateString()} {new Date(enq.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: UNANSWERED QUERIES */}
+        {activeTab === 'unanswered' && (
+          <div style={{ background: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h2 style={{ color: '#1A4A95', margin: 0 }}>Unanswered Query Insights</h2>
+              <button
+                onClick={loadData}
+                style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                Refresh
+              </button>
+            </div>
+            <p style={{ color: '#64748b', fontSize: '14px', marginTop: 0 }}>
+              Visitor questions that triggered the chatbot fallback mechanism. Review these to discover knowledge base gaps and ingest new institutional documents.
+            </p>
+
+            {unanswered.length === 0 ? (
+              <p style={{ textAlign: 'center', padding: '30px', color: '#10b981' }}>
+                🎉 Great job! No unanswered questions logged.
+              </p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#334155' }}>
+                      <th style={{ padding: '12px 14px' }}>#</th>
+                      <th style={{ padding: '12px 14px' }}>Visitor Query</th>
+                      <th style={{ padding: '12px 14px' }}>Timestamp</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right' }}>Suggested Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unanswered.map((un, idx) => (
+                      <tr key={un.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '12px 14px', color: '#94a3b8' }}>{idx + 1}</td>
+                        <td style={{ padding: '12px 14px', fontWeight: 600, color: '#b91c1c' }}>"{un.query}"</td>
+                        <td style={{ padding: '12px 14px', color: '#64748b', fontSize: '12px' }}>
+                          {new Date(un.createdAt).toLocaleString()}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                          <button
+                            onClick={() => {
+                              setNewTitle(`Notice regarding: ${un.query.slice(0, 30)}`);
+                              setShowUploadModal(true);
+                            }}
+                            style={{ backgroundColor: '#2563eb', color: 'white', border: 0, padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                          >
+                            + Ingest Knowledge
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: AUDITED COURSE SPREADSHEETS */}
         {activeTab === 'spreadsheets' && (
           <div style={{ background: 'white', padding: '25px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <h2 style={{ color: '#1A4A95', marginTop: 0 }}>Audited Course Spreadsheet Verification</h2>
@@ -387,7 +562,7 @@ export const AdminDashboardPage: React.FC = () => {
           </div>
         )}
 
-        {/* Upload Modal */}
+        {/* Upload Modal with File Support */}
         {showUploadModal && (
           <div
             style={{
@@ -434,6 +609,16 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
 
                 <div className="form-group">
+                  <label>Upload Document File (.txt, .md, .json) - Optional:</label>
+                  <input
+                    type="file"
+                    accept=".txt,.md,.json,.csv"
+                    onChange={handleFileUpload}
+                    style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '14px', background: '#f8fafc' }}
+                  />
+                </div>
+
+                <div className="form-group">
                   <label>Source Type:</label>
                   <select
                     value={newType}
@@ -463,7 +648,7 @@ export const AdminDashboardPage: React.FC = () => {
                   <textarea
                     required
                     rows={8}
-                    placeholder="Paste the official document text here..."
+                    placeholder="Paste or upload the official document text here..."
                     value={newContent}
                     onChange={(e) => setNewContent(e.target.value)}
                     style={{ width: '100%', padding: '12px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px', fontFamily: 'monospace', boxSizing: 'border-box' }}

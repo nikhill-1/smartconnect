@@ -1,13 +1,35 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { config } from '../config';
+import { GoogleGenAI } from '@google/genai';
+import { config, isGeminiConfigured } from '../config';
 
-const EMBEDDING_DIMENSION = 768;
+const EMBEDDING_DIMENSION = config.geminiEmbeddingDimensions;
 
-/**
- * Deterministic semantic vector generator (768 dimensions).
- * Used when no external LLM API key is configured or during offline operations.
- * Projects text tokens and character n-grams into a unit normalized vector.
- */
+export type EmbeddingKind = 'query' | 'document';
+
+let geminiClient: GoogleGenAI | null = null;
+let geminiEmbeddingsEnabled = true;
+
+export function disableGeminiEmbeddings(): void {
+  geminiEmbeddingsEnabled = false;
+}
+
+export function isGeminiEmbeddingActive(): boolean {
+  return isGeminiConfigured() && geminiEmbeddingsEnabled;
+}
+
+export function getGeminiClient(): GoogleGenAI | null {
+  if (!isGeminiConfigured()) return null;
+  if (!geminiClient) {
+    geminiClient = new GoogleGenAI({ apiKey: config.geminiApiKey });
+  }
+  return geminiClient;
+}
+
+export function getEmbeddingSignature(): string {
+  return isGeminiEmbeddingActive()
+    ? `gemini:${config.geminiEmbeddingModel}:${EMBEDDING_DIMENSION}`
+    : `local:hash-v1:${EMBEDDING_DIMENSION}`;
+}
+
 function generateDeterministicEmbedding(text: string): number[] {
   const vector = new Array(EMBEDDING_DIMENSION).fill(0);
   const normalized = text.toLowerCase().trim();
@@ -17,7 +39,6 @@ function generateDeterministicEmbedding(text: string): number[] {
     return vector;
   }
 
-  // Hash tokens into dimensions
   for (let i = 0; i < tokens.length; i++) {
     const word = tokens[i];
     let hash = 0;
@@ -28,7 +49,6 @@ function generateDeterministicEmbedding(text: string): number[] {
     const idx = Math.abs(hash) % EMBEDDING_DIMENSION;
     vector[idx] += 1.0;
 
-    // Also hash bigrams for phrase representation
     if (i > 0) {
       const bigram = `${tokens[i - 1]}_${word}`;
       let biHash = 0;
@@ -41,7 +61,6 @@ function generateDeterministicEmbedding(text: string): number[] {
     }
   }
 
-  // Normalize vector to unit length (L2 norm)
   let sumSq = 0;
   for (let i = 0; i < EMBEDDING_DIMENSION; i++) {
     sumSq += vector[i] * vector[i];
@@ -56,42 +75,84 @@ function generateDeterministicEmbedding(text: string): number[] {
   return vector;
 }
 
-/**
- * Generate embedding for a single text chunk or user question.
- */
-export async function getEmbedding(text: string): Promise<number[]> {
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function embedWithGemini(text: string, kind: EmbeddingKind, title?: string): Promise<number[]> {
+  const client = getGeminiClient();
+  if (!client) throw new Error('Gemini is not configured.');
+
+  const model = config.geminiEmbeddingModel;
+  const legacyStyle = model.includes('embedding-001');
+  const contents = legacyStyle
+    ? text
+    : kind === 'query'
+      ? `task: search result | query: ${text}`
+      : `title: ${title || 'none'} | text: ${text}`;
+
+  const request: any = {
+    model,
+    contents,
+    config: { outputDimensionality: EMBEDDING_DIMENSION },
+  };
+  if (legacyStyle) {
+    request.config.taskType = kind === 'query' ? 'RETRIEVAL_QUERY' : 'RETRIEVAL_DOCUMENT';
+  }
+
+  let lastError: any;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const result = await client.models.embedContent(request);
+      const values = result.embeddings?.[0]?.values;
+      if (!values || values.length === 0) {
+        throw new Error('Gemini returned an empty embedding.');
+      }
+      if (values.length !== EMBEDDING_DIMENSION) {
+        throw new Error(`Gemini returned ${values.length} dimensions but ${EMBEDDING_DIMENSION} are expected.`);
+      }
+      return values;
+    } catch (err: any) {
+      lastError = err;
+      const retriable = /429|500|503|UNAVAILABLE|RESOURCE_EXHAUSTED|fetch failed/i.test(String(err?.message));
+      if (!retriable || attempt === 3) break;
+      await sleep(600 * attempt);
+    }
+  }
+  throw lastError;
+}
+
+export async function getEmbedding(text: string, kind: EmbeddingKind = 'document', title?: string): Promise<number[]> {
   const trimmed = text.trim();
   if (!trimmed) {
     return new Array(EMBEDDING_DIMENSION).fill(0);
   }
 
-  // Try Google Gemini API if configured
-  if (config.geminiApiKey && config.geminiApiKey.trim() !== '' && config.geminiApiKey !== 'your_gemini_api_key_here') {
+  if (isGeminiEmbeddingActive()) {
     try {
-      const genAI = new GoogleGenerativeAI(config.geminiApiKey);
-      const model = genAI.getGenerativeModel({ model: config.geminiEmbeddingModel || 'text-embedding-004' });
-      const result = await model.embedContent(trimmed);
-      const values = result.embedding.values;
-      if (values && values.length > 0) {
-        return values;
-      }
+      return await embedWithGemini(trimmed, kind, title);
     } catch (err: any) {
-      console.warn('[EmbeddingService] Gemini embedding call failed, falling back to local deterministic embedding:', err.message);
+      if (kind === 'query') {
+        console.warn('[EmbeddingService] Gemini query embedding failed; using keyword search only:', err.message);
+        return [];
+      }
+      console.warn('[EmbeddingService] Gemini document embedding failed, falling back to deterministic embedding:', err.message);
+      return generateDeterministicEmbedding(trimmed);
     }
   }
 
-  // Fallback to high-precision deterministic embedding
   return generateDeterministicEmbedding(trimmed);
 }
 
-/**
- * Batch generate embeddings for multiple chunks
- */
-export async function getBatchEmbeddings(texts: string[]): Promise<number[][]> {
-  const embeddings: number[][] = [];
-  for (const text of texts) {
-    const emb = await getEmbedding(text);
-    embeddings.push(emb);
+export async function getBatchEmbeddings(texts: string[], title?: string): Promise<number[][]> {
+  const embeddings: number[][] = new Array(texts.length);
+  const concurrency = isGeminiEmbeddingActive() ? 4 : 32;
+  for (let start = 0; start < texts.length; start += concurrency) {
+    const slice = texts.slice(start, start + concurrency);
+    const results = await Promise.all(slice.map((t) => getEmbedding(t, 'document', title)));
+    results.forEach((vector, i) => {
+      embeddings[start + i] = vector;
+    });
   }
   return embeddings;
 }

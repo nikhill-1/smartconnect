@@ -1,16 +1,5 @@
-function admins(){
-
-    let names = document.getElementById("name").value;
-    let pass = document.getElementById("password").value;
-    if(names == "12345" ){
-       if(pass == "admin"){
-        open("chatbotadmin.html");
-       }
-       else{
-        window.alert("incorrect password")
-       }
-    }
-    else{
-      window.alert("incorrect id or password");
-    }
-    }
+// Deprecated client-side check. Admin authentication is strictly handled server-side at /api/admin/login.
+console.warn("Client-side admin.js is deprecated. Please use the secure React portal at /admin.");
+function admins() {
+  window.location.href = "/admin";
+}

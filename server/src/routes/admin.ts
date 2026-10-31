@@ -6,7 +6,12 @@ import {
   AuthenticatedRequest,
   AUDITED_COURSE_PIN_REGISTRY,
 } from '../services/authService';
-import { listDocuments, deleteDocument } from '../db/vectorStore';
+import {
+  listDocuments,
+  deleteDocument,
+  listEnquiries,
+  listUnansweredQueries,
+} from '../db/vectorStore';
 import { ingestCustomDocument, ingestDocSeed } from '../services/documentIngestion';
 import { initialKnowledgeData } from '../data/initialKnowledge';
 
@@ -144,7 +149,6 @@ adminRouter.delete('/documents/:id', requireAdminAuth, async (req: Authenticated
 adminRouter.post('/documents/:id/reindex', requireAdminAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params.id);
-    // Check if initial document seed
     const seed = initialKnowledgeData.find((d) => d.id === id);
     if (seed) {
       await deleteDocument(id);
@@ -164,6 +168,44 @@ adminRouter.post('/documents/:id/reindex', requireAdminAuth, async (req: Authent
     res.status(500).json({
       success: false,
       error: 'Failed to reindex document.',
+    });
+  }
+});
+
+/**
+ * GET /api/admin/enquiries
+ * Retrieve student prospective enquiry submissions (Protected)
+ */
+adminRouter.get('/enquiries', requireAdminAuth, async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const enquiries = await listEnquiries();
+    res.json({
+      success: true,
+      enquiries,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve admission enquiries: ' + err.message,
+    });
+  }
+});
+
+/**
+ * GET /api/admin/unanswered-queries
+ * Retrieve queries that triggered chatbot fallback (Protected)
+ */
+adminRouter.get('/unanswered-queries', requireAdminAuth, async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const queries = await listUnansweredQueries();
+    res.json({
+      success: true,
+      queries,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve unanswered queries: ' + err.message,
     });
   }
 });

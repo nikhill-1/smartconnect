@@ -14,14 +14,14 @@ export const AboutUsPage: React.FC = () => {
         <img src="/aboutus.jpg" alt="About TRR Group of Institutions" id="imm" style={{ maxHeight: '400px' }} />
 
         <div className="ddd">
-          <h1 id="h22">ACREDITION &amp; AFFILIATIONS</h1>
+          <h1 id="h22">ACCREDITATIONS &amp; AFFILIATIONS</h1>
           <img src="/AICTELogo.jpg" alt="AICTE Approved" />
           <img src="/JNTUHyderabadlogo.jpg" alt="JNTU Hyderabad Affiliated" />
           <img src="/PharmacyCouncilofIndiaLogo.jpg" alt="Pharmacy Council of India Approved" />
         </div>
 
         <div className="kkk">
-          <h1>ORGINS</h1>
+          <h1>ORIGINS</h1>
         </div>
         <div className="TKR">
           <img src="/TKR.jpg" alt="Late Mr. Teegala Krupakar Reddy" />

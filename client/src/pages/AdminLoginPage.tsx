@@ -93,8 +93,8 @@ export const AdminLoginPage: React.FC = () => {
             </div>
           </form>
 
-          <div style={{ marginTop: '15px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
-            <span>Default demo credentials: ID <b>12345</b> / Password <b>admin</b></span>
+          <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '12px', color: '#64748b', lineHeight: 1.5 }}>
+            <span>Authorised personnel only. Session activity is encrypted and monitored under institutional security policy.</span>
           </div>
         </div>
       </main>
